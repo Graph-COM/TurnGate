@@ -1,0 +1,81 @@
+# config/config_target_shift_gemini.yml
+# Complete config for Target-Model Shift Experiment - Gemini
+# Paper Figure 4b
+
+experiment_name: "target_shift_gemini"
+description: "Target-Model OOD Shift to Gemini-2.5-Pro - Evaluate TurnGate robustness across different architectures"
+
+# Defense configuration
+defense:
+  method: "turngate"
+  config: "config/config_rl_defense.yml"  # Defense trained on GPT-5.2
+
+# Attack configuration
+attack:
+  method: "cka-agent"
+  config: "config/method/cka-agent.yml"
+
+# Target model configuration - GEMINI (different from training distribution)
+target_model:
+  type: "blackbox"
+  provider: "gemini"
+  name: "gemini-2.5-pro"           # Frontier model, different architecture from GPT-5.2
+  
+  # API credentials (set via environment variable)
+  api_key: "${GEMINI_API_KEY}"
+  
+  # Generation parameters
+  generation:
+    max_tokens: 4096
+    temperature: 0.7
+    top_p: 0.9
+  
+# Dataset configuration - Use MTID test set (same as training evaluation)
+dataset:
+  type: "csv"
+  path: "data/datasets/cka-attack/gpt52gen_filter_test_cka_dataset.csv"
+  split: "test"
+  batch_size: 16
+  max_samples: null
+  
+  # Column mapping
+  column_mapping:
+    query: "query"
+    response: "response"
+    category: "category"
+
+# Evaluation configuration
+evaluation:
+  judge_model: "gemini-2.5-flash"
+  judge_type: "blackbox"
+  metrics:
+    - "attack_success_rate"
+    - "harmful_rate"
+    - "response_quality"
+  
+  # Batching for evaluation
+  batch_size: 32
+  
+# Output configuration
+output:
+  results_dir: "results/target_shift_gemini"
+  save_intermediate: true
+  save_pending_judge: true
+  
+# Logging
+logging:
+  level: "INFO"
+  log_file: "results/target_shift_gemini/experiment.log"
+
+# Notes
+notes: |
+  This experiment tests whether TurnGate defense (trained on GPT-5.2) 
+  transfers to a different frontier model (Gemini-2.5-Pro).
+  
+  Key differences:
+  - Different model architecture
+  - Different training data distribution
+  - Different tokenizer and response patterns
+  
+  Expected outcome: Performance degradation as typical for cross-model transfers.
+  This tests TurnGate's robustness to target-model shifts.

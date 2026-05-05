@@ -1,0 +1,21 @@
+# Core (used by verl_converter)
+pandas>=1.0.0
+python-dotenv
+tqdm>=4.0.0
+
+# Intention Analysis defender
+# - Closed-source: set OPENAI_API_KEY
+# - Open-source: pip install vllm (in-process, no server needed)
+openai>=1.0.0
+vllm>=0.4.0
+
+# For embedding-based similarity mixing (optional)
+numpy>=1.20.0
+scikit-learn>=1.0.0
+google-genai>=0.2.0
+# Install with: pip install -r requirements.txt
+torch>=2.0.0
+transformers>=4.40.0
+peft>=0.10.0  # For LoRA training
+accelerate>=0.27.0  # For distributed training
+datasets>=2.14.0  # For data loading utilities

@@ -1,0 +1,74 @@
+# config/config_attacker_shift_maj.yml
+# Complete config for Attacker-Pipeline Shift Experiment - MAJ
+# Paper Figure 4d
+
+experiment_name: "attacker_shift_maj"
+description: "Attacker-Pipeline OOD Shift to Multi-Agent Jailbreak - Evaluate TurnGate robustness to different attack paradigms"
+
+# Defense configuration
+defense:
+  method: "turngate"
+  config: "config/config_rl_defense.yml"  # Defense trained against CKA-Agent
+
+# Attack configuration - MULTI-AGENT JAILBREAK (different from training distribution)
+attack:
+  method: "multi-agent-jailbreak"
+  config: "config/method/maj-agent.yml"
+
+# Target model configuration - Same as training (Llama-3.1-8B)
+target_model:
+  type: "whitebox"
+  model_name: "meta-llama/Llama-3.1-8B-Instruct"
+  
+# Dataset configuration - Use MTID test set
+dataset:
+  type: "csv"
+  path: "data/datasets/cka-attack/gpt52gen_filter_test_cka_dataset.csv"
+  split: "test"
+  batch_size: 16
+  max_samples: null
+  
+  # Column mapping
+  column_mapping:
+    query: "query"
+    response: "response"
+    category: "category"
+
+# Evaluation configuration
+evaluation:
+  judge_model: "gemini-2.5-flash"
+  judge_type: "blackbox"
+  metrics:
+    - "attack_success_rate"
+    - "harmful_rate"
+    - "response_quality"
+  
+  # Batching for evaluation
+  batch_size: 32
+  
+# Output configuration
+output:
+  results_dir: "results/attacker_shift_maj"
+  save_intermediate: true
+  save_pending_judge: true
+  
+# Logging
+logging:
+  level: "INFO"
+  log_file: "results/attacker_shift_maj/experiment.log"
+
+# Notes
+notes: |
+  This experiment tests whether TurnGate defense (trained against CKA-Agent tree-search)
+  transfers to Multi-Agent Jailbreak (decomposition-based attack).
+  
+  Key differences in attack paradigm:
+  - CKA-Agent: Tree-search with iterative refinement over multiple queries
+  - MAJ: Single query decomposition into harmless sub-questions
+  
+  Different attack philosophy:
+  - CKA-Agent: Explores multiple paths, uses reflection and synthesis
+  - MAJ: Horizontal decomposition, answers sub-questions independently
+  
+  Expected outcome: Performance degradation as TurnGate is trained on CKA-Agent patterns.
+  This tests TurnGate's robustness to different attack methodologies.

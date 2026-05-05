@@ -1,0 +1,130 @@
+# config/method/cka-agent.yml
+description: "Correlated Knowledge Attack Agent - Tree search based jailbreak with reflection"
+
+config:
+  # controller model (white-box only, handles decomposition/synthesis/evaluation prompts)
+  controller_model:
+    name: "huihui-ai/Qwen3-8B-abliterated"  # "huihui-ai/Qwen3-32B-abliterated" or "huihui-ai/Qwen3-8B-abliterated"
+    temperature: 0.7
+    top_p: 0.9
+    max_tokens: 4096
+    max_new_tokens: 4096  # increase generated tokens to ensure complete JSON output
+    input_max_length: 32768  # increase max model length
+    device_map: "auto"
+    use_vllm: true
+    auto_init: true  # avoid auto-initialization in constructor
+    parse_retry: 2     # max parse retries on failure (up to 3 total attempts)
+    enable_thinking: true  # disable thinking mode
+    remove_thinking: true  # remove thinking from response (only effective when enable_thinking=true)
+
+    # vLLM config (used only for tool calls)
+    vllm_kwargs:
+      tensor_parallel_size: 1
+      trust_remote_code: true
+      gpu_memory_utilization: 0.95
+      # max_model_len: 131072  # increase max model length
+      max_model_len: 32768  # increase max model length
+      enforce_eager: false
+      disable_custom_all_reduce: true
+      disable_log_stats: true
+
+      # rope_scaling:  # Yarn-related config
+      #   rope_type: "yarn"
+      #   factor: 4.0
+      #   original_max_position_embeddings: 32768
+
+    hf_token: "YOUR_HF_TOKEN"  # HF Token
+
+    # tool call config (OpenAI+vLLM server mode)
+    enable_tool_calling: false
+    vllm_server_port: 8011
+
+  # online judge (used during attack, separate from offline evaluation.judge_model)
+  judge_model:
+    # Choose "whitebox" or "blackbox"
+    type: "blackbox"
+
+    # ---------- White-box (local HF models) ----------
+    whitebox:
+      name: "meta-llama/Llama-3.1-70B-Instruct"
+      device_map: null # change from "auto" to null to avoid device mapping
+      torch_dtype: "float16"
+      load_in_8bit: false
+      load_in_4bit: false
+      use_vllm: true       # enable vLLM support
+      hf_token: "YOUR_HF_TOKEN"
+      max_new_tokens: 512  # For parsing JSON response
+      temperature: 0.0     # Deterministic evaluation
+
+      # vLLM config
+      vllm_kwargs:
+        tensor_parallel_size: 2        # tensor parallel size
+        gpu_memory_utilization: 0.9    # GPU memory utilization (conservative)
+        max_model_len: 4096            # max model length
+        enforce_eager: true            # force eager mode
+        disable_custom_all_reduce: true # disable custom all-reduce
+        disable_log_stats: true        # disable log stats
+
+    # ---------- Black-box (API models) ----------
+    blackbox:
+      provider: "gemini"               # "openai", "anthropic", "cohere", "together", "gemini"
+      name: "gemini-2.5-flash"         # Model name for the provider
+      # official channel
+      api_key: "YOUR_API_KEY_HERE"                      # Gemini official API key
+      # api_key: "YOUR_API_KEY_HERE"
+      # Gemini proxy mode (active when provider: "gemini" and use_proxy: true)
+      use_proxy: false                  # whether to use proxy
+      proxy_api_key: "YOUR_API_KEY_HERE"                # proxy base URL (OpenAI-compatible)
+      max_tokens: 512                  # Max tokens for API generation
+      temperature: 0.0                 # Sampling temperature
+      top_p: 0.9                       # Nucleus sampling
+      # rate limit backoff strategy (infinite retry)
+      rate_limit_backoff_base: 1.0     # initial wait seconds
+      rate_limit_backoff_max: 60.0     # max wait seconds
+      rate_limit_jitter: 0.2           # jitter ratio
+
+  # Success criteria for tree search
+  success_criteria:
+    require_full_success: true  # Only "D" classification counts as success
+    fallback_priority: ["C", "B", "A"]  # Priority order for fallback selection
+
+  # tool config
+  use_external_tools: false
+  available_tools:
+    - "web_search_fetch"
+    - "read_file"
+    - "write_file"
+
+  # Tree search settings
+  max_depth: 5                     # Maximum depth of search tree
+  max_iterations: 5                # 5 iterations for thorough tree search
+  exploration_weight: 1.414       # UCT exploration constant (sqrt(2))
+
+  # Expansion settings
+  single_path_confidence: 0.8     # Confidence threshold for single path
+  num_branches: 3                 # Number of branches when exploring (simplified name)
+
+  # Memory settings
+  use_reflection: false            # Enable reflection mechanism
+  memory_size: 50                 # Maximum reflections to store (reduced for efficiency)
+
+  # Performance settings
+  batch_size: 1                   # Process queries individually for tree search
+  verbose: true                   # Enable verbose logging for debugging
+
+  # Gemini API JSON corrector: fixes malformed JSON from weak (8B) controller
+  use_gemini_json_corrector: true
+  gemini_json_corrector:
+    provider: gemini
+    name: gemini-2.5-flash
+    api_key: "YOUR_API_KEY_HERE"
+    use_proxy: false
+    max_tokens: 512
+    temperature: 0.0
+    top_p: 0.9
+    rate_limit_backoff_base: 1.0
+    rate_limit_backoff_max: 60.0
+    rate_limit_jitter: 0.2
+
+  # Intermediate results saving (following AutoDAN approach)
+  save_intermediate: true         # Save intermediate results for analysis

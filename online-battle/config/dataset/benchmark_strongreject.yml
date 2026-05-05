@@ -1,0 +1,41 @@
+# config/dataset/benchmark_strongreject.yml
+# Benchmark Shift Experiment - StrongReject OOD Dataset
+# Paper Figure 4a: Benchmark shift to StrongReject
+
+description: "StrongReject benchmark for OOD generalization testing"
+
+dataset:
+  # Dataset source
+  data_source:
+    type: "csv"
+    path: "data/datasets/cka-attack/strongreject_cka_dataset.csv"
+    
+  # Dataset configuration
+  config:
+    split: "test"
+    batch_size: 32
+    shuffle: false
+    
+    # Column mapping
+    column_mapping:
+      query: "query"              # Harmful query column
+      response: "response"        # Target model response (optional)
+      category: "category"        # Behavior category
+      
+    # Data filtering
+    filtering:
+      max_samples: null           # Use all samples
+      sample_ratio: 1.0
+      
+  # Metadata
+  metadata:
+    domain: "StrongReject"
+    num_behaviors: 200
+    description: "StrongReject benchmark for testing model robustness"
+    paper_reference: "Figure 4a - Benchmark Shift"
+    
+  # For evaluation
+  evaluation:
+    metric: "attack_success_rate"
+    judge_type: "blackbox"
+    judge_model: "gemini-2.5-flash"

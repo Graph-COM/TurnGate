@@ -1,0 +1,271 @@
+# Correlated Knowledge Jailbreak Project Configuration
+
+# =========================
+# Experiment configuration
+# =========================
+experiment:
+  name: "cka-agent-8b-gpt52gen_filter_test-gpt52-no-defense"
+  output_dir: "results/cka-agent-8b-gpt52gen_filter_test-gpt52-no-defense"
+  log_level: "INFO"
+  max_samples_per_dataset: null  # Set to null for full dataset, or a number for testing
+  seed: 42                      # Random seed (if used by components)
+
+# =========================
+# Data configuration
+# =========================
+data:
+  data_dir: "data/datasets"          # Root folder for datasets
+  datasets:
+    # Dataset name options: 'harmbench_cka', 'jbb_behaviors_cka', 'strongreject_cka',
+    #                       'gpt52gen_cka' (test, 34), 'gpt52gen_cka_all' (all, 214)
+    - name: "gpt52gen_filter_test"
+      size: "small"
+
+# =========================
+# Model configuration
+# =========================
+model:
+  # Choose "whitebox" or "blackbox"
+  type: "blackbox"
+
+  # ---------- White-box (local HF models) - separate batch_size config ----------
+  whitebox:
+    name: "openai/gpt-oss-120b"      # OpenAI GPT-OSS-120B model
+    device_map: "auto"               # auto device mapping for multi-GPU (HF Transformers)
+    max_length: 512                  # Max new tokens for local generation
+    temperature: 0.7                 # Sampling temperature (only used if do_sample=true in your code)
+    do_sample: true                  # Local model default; evaluation path uses greedy in code
+    top_p: 0.9                       # Nucleus sampling (if do_sample=true)
+    load_in_8bit: false              # Quantization flags (MXFP4 model needs no extra quantization)
+    load_in_4bit: false              # 4bit quantization (MXFP4 model needs no extra quantization）
+    torch_dtype: "bfloat16"          # bfloat16 recommended for MXFP4 quantized models
+    hf_token: "YOUR_HF_TOKEN"  # HF Token
+    input_max_length: 4096           # increase max input length
+
+    # dataset batch processing config
+    batch_size: 1                    # batch_size=1 recommended for 120B models
+
+    # vLLM engine config
+    use_vllm: true                   # Whether to use vLLM for accelerated inference
+    vllm_kwargs:                     # Additional vLLM configuration parameters
+      tensor_parallel_size: 1        # multi-GPU TP=2 (requires at least 2 GPUs in CUDA_VISIBLE_DEVICES)
+      trust_remote_code: true
+      max_logprobs: 10000
+      gpu_memory_utilization: 0.95   # reduce GPU memory usage, leave room for KV Cache
+      max_model_len: 4096            # reduce max model length to save memory
+      enforce_eager: true            # disable CUDA graph optimization to avoid hangs
+      disable_custom_all_reduce: true
+      disable_log_stats: true
+      # GPT-OSS-120B MXFP4 quantization config
+      dtype: "bfloat16"             # bfloat16 recommended for MXFP4 quantized models
+      quantization: "mxfp4"         # enable MXFP4 MoE weight quantization
+      swap_space: 8                 # swap space (GB)
+      cpu_offload_gb: 0              # CPU offload (GB)
+
+
+  # ---------- Black-box (API models) - separate batch_size config ----------
+  blackbox:
+    provider: "openai"             # "openai", "anthropic", "cohere", "together", "gemini", "openrouter"
+    name: "gpt-5.2"         # Model name for the provider
+    #provider: "openai"
+    #name: "gpt-5"            # "gemini" or "openai"
+    # provider: "openrouter"
+    # name: "moonshotai/kimi-k2:free"            # Kimi K2 via OpenRouter (free tier)
+    # official channel
+    # api_key: "YOUR_API_KEY_HERE"                # API key
+    api_key: "YOUR_API_KEY_HERE"                      # API key
+    #api_key: "YOUR_API_KEY_HERE" #gpt key
+    use_proxy: false                  # whether to use proxy
+    base_url: "https://api.openai.com/v1"  # OpenAI official API
+    # base_url: "https://openrouter.ai/api/v1"  # OpenRouter API
+    # provider: "anthropic"            # "openai", "anthropic", "cohere", "together", "gemini", "openrouter"
+    # name: "claude-haiku-4-5"         # Claude Haiku 4.5 model "claude-haiku-4-5-20251001" or "claude-haiku-4-5"
+    # api_key: "YOUR_API_KEY_HERE"  # Replace with your Anthropic API key
+    # base_url: null                   # Not needed for official Anthropic API
+
+    max_tokens: 4096                  # Max tokens for API generation
+    temperature: 0.7                 # Sampling temperature
+    top_p: 0.9                       # Nucleus sampling
+    # rate limit backoff strategy (infinite retry)
+    rate_limit_backoff_base: 1.0     # initial wait seconds
+    rate_limit_backoff_max: 60.0     # max wait seconds
+    rate_limit_jitter: 0.2           # jitter ratio
+
+    # OpenRouter specific config
+    extra_headers:                    # OpenRouter extra headers (optional)
+      # HTTP-Referer: "https://your-website.com"  # optional: your website URL
+      # X-Title: "Your App Name"                   # optional: your app name
+      # X-User-Agent: "YourApp/1.0"               # optional: your app user agent
+
+    # dataset batch processing config
+    batch_size: 1                    # number of dataset inputs to process at once
+
+# =========================
+# Evaluation configuration
+# =========================
+evaluation:
+  # Judge models configuration
+  judge_models:
+    # For harmful rate (using Llama Guard)
+    llama_guard:
+      name: "meta-llama/Llama-Guard-3-8B"
+      device_map: "auto"
+      max_length: 4096  # increased to ensure enough space for long inputs
+      temperature: 0.0
+      do_sample: false
+      load_in_8bit: false
+      load_in_4bit: false
+      torch_dtype: "float16"
+      hf_token: "YOUR_HF_TOKEN"
+      batch_size: 1
+      use_vllm: false
+      vllm_kwargs:
+        tensor_parallel_size: 2
+        trust_remote_code: true
+        gpu_memory_utilization: 0.6
+        max_model_len: 2048
+        enforce_eager: true
+
+    # For ASR (using Llama 3.1 70B)
+    llama_judge:
+      # Choose "whitebox" or "blackbox"
+      type: "blackbox"
+
+      # ---------- White-box (local HF models) ----------
+      whitebox:
+        name: "meta-llama/Llama-3.1-70B-Instruct"
+        device_map: "auto"
+        max_length: 4096 # max output length
+        max_new_tokens: 4096 # max input length
+        temperature: 0.0
+        do_sample: false
+        load_in_8bit: true  # Using 8bit for 70B model
+        load_in_4bit: false
+        torch_dtype: "float16"
+        hf_token: "YOUR_HF_TOKEN"
+        batch_size: 1
+        use_vllm: false
+        parse_retry: 2
+
+      # ---------- Black-box (API models) ----------
+      blackbox:
+        provider: "gemini"               # "openai", "anthropic", "cohere", "together", "gemini"
+        name: "gemini-2.5-flash"         # Model name for the provider
+        # official channel
+        api_key: "YOUR_API_KEY_HERE"                      # Gemini official API key
+        #api_key: "YOUR_API_KEY_HERE"
+        # Gemini proxy mode (active when provider: "gemini" and use_proxy: true)
+        use_proxy: false                  # whether to use proxy
+        proxy_api_key: "YOUR_API_KEY_HERE"                # proxy API key
+        max_tokens: 512                  # Max tokens for API generation
+        temperature: 0.0                 # Sampling temperature
+        top_p: 0.9                       # Nucleus sampling
+        # rate limit backoff strategy (infinite retry)
+        rate_limit_backoff_base: 1.0     # initial wait seconds
+        rate_limit_backoff_max: 60.0     # max wait seconds
+        rate_limit_jitter: 0.2           # jitter ratio
+
+  # Evaluation metrics
+  metrics:
+    #- "harmful_rate"     # Renamed from avg_failure_rate
+    - "attack_success_rate"  # New ASR metric
+
+# =========================
+# Jailbreak methods configuration
+# =========================
+methods:
+  baselines:
+    - "cka-agent"       # CKA-Agent method for correlated knowledge jailbreak
+    # - "actor_attack"   # Actor Attack (multi-turn role-playing jailbreak)
+    #- "pap"            # pap (Persuasive Adversarial Prompt) method
+    # - "multi_agent_jailbreak"     # multi_agent_jailbreak (Multi-Agent Jailbreak) method
+    # - "autodan"        # autodan method
+    # - "pair"          # pair (Pairwise Similarity) method
+    #- "vanilla"        # vanilla (Vanilla) method
+    # - "agent_self_response"  # Agent self-response baseline
+    # - "x_teaming"     # X-Teaming method
+  # proposed: [] # proposed methods not used for now
+
+# =========================
+# Logging configuration
+# =========================
+logging:
+  console_level: "INFO"             # Console logging level
+  file_level: "DEBUG"               # File logging level
+  log_file: "logs/experiment.log"   # Log file path
+
+
+# =========================
+# Defense configuration
+# =========================
+defense:
+  enabled: false                    # Global switch to enable/disable defense
+  type: "none"                      # No defense
+
+  # LLM Guard specific configuration
+  llm_guard:
+    guard_model_name: "meta-llama/Llama-Guard-3-8B"  # or "Qwen/Qwen3Guard-Gen-8B"
+    device: "cuda:0"                # Device for guard model
+    load_in_8bit: false             # Use 8-bit quantization for memory efficiency
+    hf_token: "YOUR_HF_TOKEN"  # HuggingFace token
+    custom_refusal_template: null   # Optional: Custom refusal message template with {category} placeholder
+    max_model_len: 8192             # Maximum model length for vLLM
+    # vLLM configuration
+    use_vllm: true                  # Whether to use vLLM (default: true)
+    vllm_gpu_memory_utilization: 0.9  # GPU memory utilization for vLLM (default: 0.9)
+    vllm_tensor_parallel_size: null   # Tensor parallel size (null = auto-detect, default: null)
+    vllm_enforce_eager: true        # Enforce eager mode to avoid CUDA graph issues (default: true)
+    vllm_disable_custom_all_reduce: true  # Disable custom all reduce (default: true)
+    vllm_disable_log_stats: true    # Disable log stats (default: true)
+
+  # GraySwanAI Guard specific configuration
+  grayswanai_guard:
+    guard_model_name: "GraySwanAI/Llama-3-8B-Instruct-RR"  # Refusal-specialized safety model
+    device: "auto"                # Device for guard model
+    load_in_8bit: false             # Use 8-bit quantization for memory efficiency
+    hf_token: "YOUR_HF_TOKEN"  # HuggingFace token
+    custom_refusal_template: null   # Optional: Custom refusal message template with {categories} placeholder
+    max_model_len: 8192             # Maximum model length for vLLM
+    # vLLM configuration
+    use_vllm: true                  # Whether to use vLLM (default: true)
+    vllm_gpu_memory_utilization: 0.9  # GPU memory utilization for vLLM (default: 0.7)
+    vllm_tensor_parallel_size: null   # Tensor parallel size (null = auto-detect, default: null)
+    vllm_enforce_eager: true        # Enforce eager mode to avoid CUDA graph issues (default: true)
+    vllm_disable_custom_all_reduce: true  # Disable custom all reduce (default: true)
+    vllm_disable_log_stats: true    # Disable log stats (default: true)
+
+  # Rephrasing Defense Configuration
+  rephrasing:
+    rephrase_model_name: "meta-llama/Llama-3.1-8B-Instruct"  # Model for rephrasing
+    max_new_tokens: 1024              # Max tokens for rephrased output
+    temperature: 0.3                 # Lower temperature for more deterministic rephrasing
+    hf_token: "YOUR_HF_TOKEN"  # HuggingFace token
+    max_model_len: 8192             # Maximum model length for vLLM
+    # vLLM configuration
+    use_vllm: true                  # Whether to use vLLM (default: true)
+    vllm_gpu_memory_utilization: 0.5  # GPU memory utilization for vLLM (default: 0.5)
+    vllm_tensor_parallel_size: null   # Tensor parallel size (null = auto-detect, default: null)
+    vllm_enforce_eager: true        # Enforce eager mode to avoid CUDA graph issues (default: true)
+    vllm_disable_custom_all_reduce: true  # Disable custom all reduce (default: true)
+    vllm_disable_log_stats: true    # Disable log stats (default: true)
+
+  # Perturbation Defense Configuration
+  perturbation:
+    enable_spacing: true             # Enable random spacing perturbations
+    enable_case: true                # Enable case randomization
+    enable_synonyms: true            # Enable synonym replacement (requires NLTK)
+    spacing_prob: 0.1                # Probability of spacing change per word (0.0-1.0)
+    case_prob: 0.1                   # Probability of case change per character (0.0-1.0)
+    synonym_prob: 0.1                # Probability of synonym replacement per word (0.0-1.0)
+    seed: 42                         # Random seed for reproducibility (optional)
+
+  # Intent-Defender online defense (Output Defense, stateful)
+  # Unlike above defenses (Input Defense, stateless), this checks target model's
+  # response with full conversation history during CKA tree search.
+  intent_defender:
+    defender_type: "rl"            # "sft" or "rl"
+    checkpoint: "anonymous_weight_path"
+    training_type: "full"          # "full" or "lora"
+    base_model: null               # Required only for lora
+    gpu_memory_utilization: 0.8
+    hf_token: null

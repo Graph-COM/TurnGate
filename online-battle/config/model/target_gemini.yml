@@ -1,0 +1,51 @@
+# config/model/target_gemini.yml
+# Target Model Shift - Gemini-2.5-Pro Configuration
+# Paper Figure 4b: Target-model shift to Gemini
+
+description: "Gemini-2.5-Pro as target model for target-model shift experiments"
+
+model:
+  # Model type and provider
+  type: "blackbox"
+  provider: "gemini"
+  
+  # Model name and version
+  name: "gemini-2.5-pro"           # Can also use "gemini-2.5-flash" for faster inference
+  
+  # API Configuration
+  api:
+    # Authentication
+    api_key: "${GEMINI_API_KEY}"   # Set via environment variable GEMINI_API_KEY
+    base_url: null                  # Use default Gemini API endpoint
+    
+    # Rate limiting
+    rate_limit:
+      requests_per_minute: 60
+      timeout: 30
+      retry_attempts: 3
+      retry_backoff_base: 1.0
+      retry_backoff_max: 60.0
+      
+  # Generation settings
+  generation:
+    max_tokens: 4096
+    temperature: 0.7
+    top_p: 0.9
+    top_k: 40
+    
+  # Model-specific settings
+  safety:
+    # Gemini has built-in safety filters
+    # These parameters control how to handle safety violations
+    handle_safety_violation: "continue"  # "continue", "error", "skip"
+    
+  # Metadata
+  metadata:
+    domain: "frontier-model"
+    inference_platform: "cloud"
+    paper_reference: "Figure 4b - Target-model Shift"
+    notes: |
+      Gemini-2.5-Pro is a frontier language model from Google.
+      Requires valid API key and sufficient quota.
+      Recommended for target-model shift experiments as a different
+      architecture from the training distribution (GPT-5.2).

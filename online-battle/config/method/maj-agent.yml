@@ -1,0 +1,76 @@
+# config/method/maj-agent.yml
+description: "Multi-Agent Jailbreak - Decompose harmful queries into harmless sub-questions, answer them, then synthesize"
+
+config:
+  # Decomposition/Synthesis Model (attack model)
+  # Uses an attack LLM to break down queries and synthesize answers
+  attack_model:
+    name: "huihui-ai/Qwen3-8B-abliterated"  # Alternative: "huihui-ai/Qwen3-32B-abliterated"
+    temperature: 0.7
+    top_p: 0.9
+    max_new_tokens: 2048
+    device: "cuda"
+    use_vllm: true
+    hf_token: "YOUR_HF_TOKEN"
+    parse_retry: 2  # max parse retries for JSON parsing
+    do_sample: true
+
+    # vLLM config (used when use_vllm=true)
+    vllm_kwargs:
+      tensor_parallel_size: 1
+      gpu_memory_utilization: 0.95
+      max_model_len: 131072
+      enforce_eager: false
+      disable_custom_all_reduce: true
+      disable_log_stats: true
+
+  # Judge model for evaluation (offline evaluation, separate from attack phase)
+  judge_model:
+    # Choose "whitebox" or "blackbox"
+    type: "blackbox"
+
+    # ---------- White-box (local HF models) ----------
+    whitebox:
+      name: "meta-llama/Llama-3.1-70B-Instruct"
+      device_map: null
+      torch_dtype: "float16"
+      load_in_8bit: false
+      load_in_4bit: false
+      use_vllm: true
+      hf_token: "YOUR_HF_TOKEN"
+      max_new_tokens: 512
+      temperature: 0.0  # Deterministic evaluation
+
+      vllm_kwargs:
+        tensor_parallel_size: 2
+        gpu_memory_utilization: 0.9
+        max_model_len: 4096
+        enforce_eager: true
+        disable_custom_all_reduce: true
+        disable_log_stats: true
+
+    # ---------- Black-box (API models) ----------
+    blackbox:
+      provider: "gemini"               # "openai", "anthropic", "cohere", "together", "gemini"
+      name: "gemini-2.5-flash"
+      api_key: "YOUR_API_KEY_HERE"
+      use_proxy: false
+      proxy_api_key: "YOUR_API_KEY_HERE"
+      max_tokens: 512
+      temperature: 0.0
+      top_p: 0.9
+      rate_limit_backoff_base: 1.0
+      rate_limit_backoff_max: 60.0
+      rate_limit_jitter: 0.2
+
+  # Multi-Agent Jailbreak specific settings
+  num_sub_questions: 3              # Number of harmless sub-questions to generate
+  min_sub_questions: 2              # Minimum allowed sub-questions
+  max_sub_questions: 5              # Maximum allowed sub-questions
+  save_intermediate: false          # Save intermediate results (decompose, answer, combine)
+  output_dir: "results/maj_intermediates"  # Directory for saving intermediate results
+
+  # Success criteria
+  success_criteria:
+    require_full_success: true
+    fallback_priority: ["C", "B", "A"]

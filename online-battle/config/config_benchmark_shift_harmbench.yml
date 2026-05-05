@@ -1,0 +1,58 @@
+# config/config_benchmark_shift_harmbench.yml
+# Complete config for Benchmark Shift Experiment - HarmBench
+# Paper Figure 4a
+
+experiment_name: "benchmark_shift_harmbench"
+description: "Benchmark OOD Shift to HarmBench - Evaluate TurnGate robustness"
+
+# Defense configuration
+defense:
+  method: "turngate"
+  config: "config/config_rl_defense.yml"
+
+# Attack configuration
+attack:
+  method: "cka-agent"
+  config: "config/method/cka-agent.yml"
+
+# Target model configuration
+target_model:
+  type: "whitebox"
+  model_name: "meta-llama/Llama-3.1-8B-Instruct"  # Same as training
+  
+# Dataset configuration
+dataset:
+  type: "csv"
+  path: "data/datasets/cka-attack/harmbench_cka_dataset.csv"
+  split: "test"
+  batch_size: 16
+  max_samples: null
+  
+  # Column mapping for HarmBench
+  column_mapping:
+    query: "query"
+    response: "response"
+    category: "category"
+
+# Evaluation configuration
+evaluation:
+  judge_model: "gemini-2.5-flash"
+  judge_type: "blackbox"
+  metrics:
+    - "attack_success_rate"
+    - "harmful_rate"
+    - "response_quality"
+  
+  # Batching for evaluation
+  batch_size: 32
+  
+# Output configuration
+output:
+  results_dir: "results/benchmark_shift_harmbench"
+  save_intermediate: true
+  save_pending_judge: true
+  
+# Logging
+logging:
+  level: "INFO"
+  log_file: "results/benchmark_shift_harmbench/experiment.log"

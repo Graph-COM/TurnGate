@@ -1,0 +1,18 @@
+# Byte-compiled / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+.env
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# OS / editor files
+.DS_Store
+*.swp
+*.swo

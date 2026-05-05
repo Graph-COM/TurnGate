@@ -1,0 +1,23 @@
+{
+  "benign_samples": 400,
+  "harmful_samples": 400,
+  "benign_train_samples": 280,
+  "benign_valid_samples": 60,
+  "benign_test_samples": 60,
+  "harmful_train_samples": 280,
+  "harmful_valid_samples": 60,
+  "harmful_test_samples": 60,
+  "benign_train_rollouts": 5600,
+  "benign_valid_rollouts": 1200,
+  "benign_test_rollouts": 1200,
+  "harmful_train_rollouts": 5600,
+  "harmful_valid_rollouts": 1200,
+  "harmful_test_rollouts": 1200,
+  "train_ratio": 0.7,
+  "valid_ratio": 0.15,
+  "rollouts_per_sample": 20,
+  "input_files": {
+    "benign": "data/gpt52_benign.jsonl",
+    "harmful": "data/gpt52_harmful.jsonl"
+  }
+}
