@@ -19,7 +19,7 @@
 
 ## Overview
 
-TurnGate is a response-aware defense mechanism designed to detect and mitigate hidden malicious intent in multi-turn dialogue systems.
+TurnGate is a response-aware defense mechanism designed to detect and mitigate hidden malicious intent in multi-turn dialogue systems. Defending state-of-the-art multi-turn malicious attacks like [CKA-Agent](https://cka-agent.github.io/).
 
 ![TurnGate Pipeline](./assets/pipeline.png)
 
