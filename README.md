@@ -15,7 +15,12 @@
 <a href="https://www.python.org/" target="_blank">
     <img alt="Python" src="https://img.shields.io/badge/Python-3.12-blue?style=for-the-badge" />
 </a>
-
+<a href="https://huggingface.co/Graph-COM/TurnGate-0.1" target="_blank">
+    <img alt="HF Model" src="https://img.shields.io/badge/%F0%9F%A4%97%20_Model-yellow.svg?style=for-the-badge" />
+</a>
+<a href="https://huggingface.co/datasets/Graph-COM/MTID" target="_blank">
+    <img alt="HF Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20_Dataset-orange.svg?style=for-the-badge" />
+</a>
 
 ## Overview
 
