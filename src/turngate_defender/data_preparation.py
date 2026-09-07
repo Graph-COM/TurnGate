@@ -200,7 +200,29 @@ def prepare_turngate_dataset(
         # vLLM's logprobs: set to a sufficient number to capture 0 and 1
         # Qwen-3B-Instruct usually outputs '0' and '1' as top-1/2 tokens
         sp = SamplingParams(max_tokens=1, logprobs=5, prompt_logprobs=0)
-        outputs = model_or_engine.generate(all_prompts, sp, use_tqdm=True)
+        # Keep vLLM reference inference consistent with HF inference and training.
+        formatted_prompts = []
+        for prompt in all_prompts:
+            try:
+                messages = [{"role": "user", "content": prompt}]
+                try:
+                    formatted_prompt = tokenizer.apply_chat_template(
+                        messages,
+                        tokenize=False,
+                        add_generation_prompt=True,
+                        enable_thinking=False,
+                    )
+                except TypeError:
+                    formatted_prompt = tokenizer.apply_chat_template(
+                        messages,
+                        tokenize=False,
+                        add_generation_prompt=True,
+                    )
+            except Exception:
+                formatted_prompt = prompt
+            formatted_prompts.append(formatted_prompt)
+
+        outputs = model_or_engine.generate(formatted_prompts, sp, use_tqdm=True)
 
         for output in outputs:
             # Get logprobs of first generated token
